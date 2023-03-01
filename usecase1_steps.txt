@@ -1,0 +1,36 @@
+1.gcloud init
+2.gsutil mb gs://usecase1_dev
+3.gsutil ls
+
+  
+4.credentials check the NAS or local
+5.syatem_path >> C:\Users\ragal\Desktop\usecase1\dummy_table.csv
+6.dummy_table.csv
+
+gsutil cp C:\Users\ragal\Desktop\usecase1\dummy_table.csv gs://usecase1_dev
+gsutil cat gs://usecase1_dev/dummy_table.csv
+
+7.create schema silver_usecase1_dev;
+8.create table silver_usecase1_dev.student(id string,name string,phone string);  ===>silver table
+9. create table gold_usecase1_dev.student(id int64,name string,phone bigint);  ===>gold table
+
+10.bq load --source_format=CSV --skip_leading_rows=1 silver_usecase1_dev.student gs://usecase1_dev/dummy_table.csv
+
+11.verify with the bucket data and silver column wise check as well()manually
+    delete from silver_usecase1_dev.student where name like 'sumana';
+12. insert into gold_usecase1_dev.student select cast(id as int64),name,cast(phone as int64) from silver_usecase1_dev.student
+13. verify wth silver data and column data wise
+14. create schema audit_usecase1_dev;
+15. create table audit_usecase1_dev.silver(datasetname string,tablename string,count string,date date);
+16.create table audit_usecase1_dev.gold(datasetname string,tablename string,count string,date date);
+17 insert into audit_usecase1_dev.silver select "silver_usecase1_dev" datasetname,"student" tablename,count(*) count,
+current_date() from silver_usecase1_dev.student;
+   insert into audit_usecase1_dev.gold select "gold_usecase1_dev" datasetname,"student" tablename,count(*) count,
+current_date() from gold_usecase1_dev.student;
+
+18. create schema view_usecase1_dev;
+    create view view_usecase1_dev.student_view as select id,name,phone from gold_usecase1_dev.student;
+    delete from silver_usecase1_dev.student where 1=1;s
+ 19.gsutil mb -c archive gs://usecase1_archive_dev
+ 20.gsutil mv gs://usecase1_dev/dummy_table.csv gs://usecase1_archive_dev
+gsutil ls gs://usecase1_archive_dev
