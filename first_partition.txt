@@ -1,0 +1,76 @@
+table creation from public dataset to project dataset
+=====================================================
+CREATE TABLE
+  stackoverflow.base_table AS
+SELECT
+  *
+FROM
+  bigquery-public-data.stackoverflow.stackoverflow_posts
+  
+  partition table creation 
+===============================
+  CREATE TABLE
+  stackoverflow.partition_table ( id INTEGER,
+    title STRING,
+    body STRING,
+    accepted_answer_id INTEGER,
+    answer_count INTEGER,
+    comment_count INTEGER,
+    community_owned_date TIMESTAMP,
+    creation_date TIMESTAMP,
+    favorite_count INTEGER,
+    last_activity_date TIMESTAMP,
+    last_edit_date TIMESTAMP,
+    last_editor_display_name STRING,
+    last_editor_user_id INTEGER,
+    owner_display_name STRING,
+    owner_user_id INTEGER,
+    parent_id INTEGER,
+    post_type_id INTEGER,
+    score INTEGER,
+    tags STRING,
+    view_count INTEGER )
+PARTITION BY
+  TIMESTAMP_TRUNC(creation_date,day);
+  
+  copy data from base_table to partition table
+================================================
+  INSERT INTO
+  `stackoverflow.partition_table`
+SELECT
+  *
+FROM
+  `stackoverflow.base_table` ;
+  
+  
+checking the diff b/w base_table and partition_table (reading)
+==============================================================
+  SELECT
+  *
+FROM
+  `stackoverflow.base_table`
+WHERE
+  creation_date='2012-11-10';
+  
+  
+SELECT
+  *
+FROM
+  `stackoverflow.partition_table`
+WHERE
+  creation_date='2012-11-10';
+  
+  DELETE
+FROM
+  `stackoverflow.partition_table`
+WHERE
+  1=1;
+
+we can able to delete the partition data from SDK.Single partition table delete possible at a time.
+Not possible to delete the unpartition tables and nullpartition tables.
+We need to apply partition on INT,DATE(Data types) and Required,Nullable(mode).
+three types of partition techniques we have
+1.time based:
+2.ingestion_time based
+3.range based
+Better to prefer the Reqired mode fields than nullable because if we prefer nullable data will move to nullpartitioning.
