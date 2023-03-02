@@ -1,0 +1,275 @@
+jira >>  need to create ticket
+
+Pull data from GIT
+===================
+
+git pull
+
+cloud initialization
+=====================
+
+gcloud init
+
+bucket creation && checking
+===========================
+
+gsutil ls
+
+gsutil mb gs://usecase2_dev/
+
+gsutil ls
+
+
+Local path check and file format check(with credentials)
+=======================================
+
+local path >> C:\Users\ragal\Desktop\usecase2\Book1.csv
+
+
+copy from local to bucket && verify
+===================================
+
+gsutil cp C:\Users\ragal\Desktop\usecase2\Book1.csv gs://usecase2_dev
+
+gsutil ls gs://usecase2_dev
+
+create schema for silver and gold
+==================================
+CREATE SCHEMA
+  silver_usecase2_dev;
+CREATE SCHEMA
+  gold_usecase2_dev;
+
+create table for silver and gold
+===================================
+
+CREATE OR REPLACE TABLE
+  silver_usecase2_dev.employee( SNAPSHOTDATE string OPTIONS(description="snapshot date to protect data"),
+    EMPLID string OPTIONS(description="employee unique id"),
+    EMPL_CLASS string OPTIONS(description="employee class"),
+    POSITION_NBR string OPTIONS(description="position where he is"),
+    POSITION_DESCRIPTION string OPTIONS(description="description about his/her position"),
+    DEPTID string OPTIONS(description="department id"),
+    DIRECOTRATE_DESCRIPTION string OPTIONS(description="directorate description"),
+    DEPARTMENT_DESCRIPTION string OPTIONS(description="description about his department"),
+    ACCT_CD string OPTIONS(description="acct cd"),
+    LOCATION string OPTIONS(description="present/permennant location"),
+    ORG_LEVEL string OPTIONS(description="organisation level"),
+    L1_EMPLID string OPTIONS(description="level one employeeid"),
+    L1_NAME string OPTIONS(description="level one employee name"),
+    L1_POSITION_NBR string OPTIONS(description="level one position number"),
+    L1_POSITION_NAME string OPTIONS(description="level one position name"),
+    L2_EMPLID string OPTIONS(description="level2 employeeid"),
+    L2_NAME string OPTIONS(description="level2 employee name"),
+    L2_POSITION_NBR string OPTIONS(description="level2 position number"),
+    L2_POSITION_NAME string OPTIONS(description="level2 position name"),
+    L3_EMPLID string OPTIONS(description="level2 employeeid"),
+    L3_NAME string OPTIONS(description="level2 name"),
+    L3_POSITION_NBR string OPTIONS(description="level2 position number"),
+    L3_POSITION_NAME string OPTIONS(description="level2 position name"),
+    LEVEL string OPTIONS(description="level"),
+    HIRE_DATE string OPTIONS(description="employyee joined"),
+    REHIRE_DT string OPTIONS(description="rehiredate"),
+    SERVICE_DT string OPTIONS(description="service dt"),
+    SERVICE_DATE string OPTIONS(description="service date"),
+   );
+
+
+CREATE OR REPLACE TABLE
+  gold_usecase2_dev.employee( SNAPSHOTDATE date OPTIONS(description="snapshot date to protect data"),
+    EMPLID int64 OPTIONS(description="employee unique id"),
+    EMPL_CLASS string OPTIONS(description="employee class"),
+    POSITION_NBR int64 OPTIONS(description="position where he is"),
+    POSITION_DESCRIPTION string OPTIONS(description="description about his/her position"),
+    DEPTID string OPTIONS(description="department id"),
+    DIRECOTRATE_DESCRIPTION string OPTIONS(description="directorate description"),
+    DEPARTMENT_DESCRIPTION string OPTIONS(description="description about his department"),
+    ACCT_CD string OPTIONS(description="acct cd"),
+    LOCATION string OPTIONS(description="present/permennant location"),
+    ORG_LEVEL int64 OPTIONS(description="organisation level"),
+    L1_EMPLID string OPTIONS(description="level one employeeid"),
+    L1_NAME string OPTIONS(description="level one employee name"),
+    L1_POSITION_NBR string OPTIONS(description="level one position number"),
+    L1_POSITION_NAME string OPTIONS(description="level one position name"),
+    L2_EMPLID string OPTIONS(description="level2 employeeid"),
+    L2_NAME string OPTIONS(description="level2 employee name"),
+    L2_POSITION_NBR string OPTIONS(description="level2 position number"),
+    L2_POSITION_NAME string OPTIONS(description="level2 position name"),
+    L3_EMPLID string OPTIONS(description="level2 employeeid"),
+    L3_NAME string OPTIONS(description="level2 name"),
+    L3_POSITION_NBR string OPTIONS(description="level2 position number"),
+    L3_POSITION_NAME string OPTIONS(description="level2 position name"),
+    LEVEL int64 OPTIONS(description="level"),
+    HIRE_DATE date OPTIONS(description="employyee joined"),
+    REHIRE_DT date OPTIONS(description="rehiredate"),
+    SERVICE_DT date OPTIONS(description="service dt"),
+    REAL_SERVICE_DATE date OPTIONS(description="service date"),
+    LAST_UPDATED TIMESTAMP OPTIONS(description="last updated time stamp"),
+    CUNTRY_COD STRING OPTIONS(description="country code"),
+    STATE_CODE STRING OPTIONS(description="state code") );
+
+  loading data from bucket to silver table
+=======================================
+
+bq load --source_format=CSV --skip_leading_rows=1 silver_usecase2_dev.employee gs://usecase2_dev/Book1.csv
+
+
+i was not created EMPLId error so manually updated
+=================================================
+   UPDATE
+  silver_usecase2_dev.employee a
+SET
+  a.EMPLID='353198a'
+WHERE
+  a.EMPLID='353198';
+
+ loading data from silver to gold using transformations
+=======================================================
+INSERT INTO
+  `gold_usecase2_dev.employee`
+SELECT
+  PARSE_DATE('%d-%m-%Y',SNAPSHOTDATE) AS SNAPSHOTDATE,
+  CAST(EMPLID AS int64),
+  EMPL_CLASS,
+  CAST(POSITION_NBR AS int64),
+  POSITION_DESCRIPTION,
+  DEPTID,
+  DIRECOTRATE_DESCRIPTION,
+  DEPARTMENT_DESCRIPTION,
+  ACCT_CD,
+  LOCATION,
+  CAST(ORG_LEVEL AS int64),
+  L1_EMPLID,
+  L1_NAME,
+  L1_POSITION_NBR,
+  L1_POSITION_NAME,
+  L2_EMPLID,
+  L2_NAME,
+  L2_POSITION_NBR,
+  L2_POSITION_NAME,
+  L3_EMPLID,
+  L3_NAME,
+  L3_POSITION_NBR,
+  L3_POSITION_NAME,
+  CAST(LEVEL AS int64),
+  CAST(HIRE_DATE AS date),
+  PARSE_DATE('%d-%m-%Y',REHIRE_DT) REHIRE_DT,
+  CAST(SERVICE_DT AS date),
+  CAST(SERVICE_DATE AS date),
+  CAST(CURRENT_TIMESTAMP() AS timestamp) LAST_UPDATED,
+  "IND" CUNTRY_CODE,
+  "AP" STATE_CODE
+FROM
+  `silver_usecase2_dev.employee` e;
+
+INSERT INTO
+  `gold_usecase2_dev.employee`
+SELECT
+  PARSE_DATE('%d-%m-%Y',SNAPSHOTDATE) AS SNAPSHOTDATE,
+  safe_cast(EMPLID as int64),
+  EMPL_CLASS,
+  CAST(POSITION_NBR AS int64),
+  POSITION_DESCRIPTION,
+  DEPTID,
+  DIRECOTRATE_DESCRIPTION,
+  DEPARTMENT_DESCRIPTION,
+  ACCT_CD,
+  LOCATION,
+  CAST(ORG_LEVEL AS int64),
+  L1_EMPLID,
+  L1_NAME,
+  L1_POSITION_NBR,
+  L1_POSITION_NAME,
+  L2_EMPLID,
+  L2_NAME,
+  L2_POSITION_NBR,
+  L2_POSITION_NAME,
+  L3_EMPLID,
+  L3_NAME,
+  L3_POSITION_NBR,
+  L3_POSITION_NAME,
+  CAST(LEVEL AS int64),
+  CAST(HIRE_DATE AS date),
+  PARSE_DATE('%d-%m-%Y',REHIRE_DT) REHIRE_DT,
+  CAST(SERVICE_DT AS date),
+  CAST(SERVICE_DATE AS date),
+  CAST(CURRENT_TIMESTAMP() AS timestamp) LAST_UPDATED,
+  "IND" CUNTRY_CODE,
+  "AP" STATE_CODE
+FROM
+  `silver_usecase2_dev.employee` e;
+
+CREATE SCHEMA
+  audit_usecase2_dev;
+CREATE TABLE
+  audit_usecase2_dev.silver(dataset_name string OPTIONS(description="dataset name"),
+    TABLE string OPTIONS(description="table name"),
+    date date OPTIONS(description="date current"),
+    count int64 OPTIONS(description="count of records inserted"));
+CREATE TABLE
+  audit_usecase2_dev.gold(dataset_name string OPTIONS(description="dataset name"),
+    TABLE string OPTIONS(description="table name"),
+    date date OPTIONS(description="date current"),
+    count int64 OPTIONS(description="count of records inserted"));
+
+create audit schema and tables 
+===============================
+
+CREATE SCHEMA
+  audit_usecase2_dev;
+CREATE TABLE
+  audit_usecase2_dev.silver(dataset_name string OPTIONS(description="dataset name"),
+    TABLE string OPTIONS(description="table name"),
+    date date OPTIONS(description="date current"),
+    count int64 OPTIONS(description="count of records inserted"));
+CREATE TABLE
+  audit_usecase2_dev.gold(dataset_name string OPTIONS(description="dataset name"),
+    TABLE string OPTIONS(description="table name"),
+    date date OPTIONS(description="date current"),
+    count int64 OPTIONS(description="count of records inserted"));
+
+insert data from silver and gold into audit
+============================================
+INSERT INTO
+  `audit_usecase2_dev.silver`
+SELECT
+  "silver_usecase2_dev",
+  "employee",
+  CURRENT_DATE(),
+  COUNT(*)
+FROM
+  `silver_usecase2_dev.employee`;
+
+INSERT INTO
+  `audit_usecase2_dev.gold`
+SELECT
+  "gold_usecase2_dev",
+  "employee",
+  CURRENT_DATE(),
+  COUNT(*)
+FROM
+  `gold_usecase2_dev.employee`;
+
+create schema and tables with data in view
+==========================================
+CREATE SCHEMA
+  view_usecase2_dev;
+CREATE VIEW
+  view_usecase2_dev.view_2 AS
+SELECT
+  *
+FROM
+  `gold_usecase2_dev.employee`
+LIMIT
+  10;
+
+delete silver table
+=======================
+DELETE
+FROM
+  `silver_usecase2_dev.employee`
+WHERE
+  1=1;
+
+
+>>>>>>>>>Need to verify the silver audit count and history main table count then only it's valid.
