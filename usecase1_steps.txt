@@ -34,3 +34,5 @@ current_date() from gold_usecase1_dev.student;
  19.gsutil mb -c archive gs://usecase1_archive_dev
  20.gsutil mv gs://usecase1_dev/dummy_table.csv gs://usecase1_archive_dev
 gsutil ls gs://usecase1_archive_dev
+
+Here we need to move the history data to archive bucket.
